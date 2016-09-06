@@ -1,0 +1,19 @@
+{
+  "name": "generator-react",
+  "version": "1.0.0",
+  "description": "Generator for simple react-redux app. Using webpack for building, mocha for testing and l10n for localization.",
+  "files": [
+    "app"
+  ],
+  "keywords": [
+    "yeoman-generator",
+    "react",
+    "redux",
+    "webpack",
+    "mocha",
+    "l10n"
+  ],
+  "dependencies": {
+    "yeoman-generator": "^0.24.1"
+  }
+}
