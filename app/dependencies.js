@@ -29,7 +29,9 @@ module.exports = {
     "style-loader",
     "testdom",
     "webpack",
-    "webpack-dev-server"
+    "webpack-dev-server",
+    "file-loader",
+    "url-loader"
   ],
   main: [
     "classnames",

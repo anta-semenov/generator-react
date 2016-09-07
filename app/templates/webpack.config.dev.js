@@ -28,6 +28,21 @@ module.exports = {
       include: path.join(__dirname, 'src')
     },
     {
+      test: /\.(jpg|png|gif|eot|svg|ttf|woff|woff2)(\?.*)?$/,
+      include: [path.join(__dirname, 'src')],
+      loader: 'file',
+      query: {name: 'images/[name].[ext]'}
+    },
+    {
+      test: /\.(mp4|webm|pdf)(\?.*)?$/,
+      include: path.join(__dirname, 'src'),
+      loader: 'url',
+      query: {
+        limit: 10000,
+        name: 'media/[name].[ext]'
+      }
+    },
+    {
       test: /\.less$/,
       loader: 'style-loader!css-loader!postcss-loader!less-loader',
       include: path.join(__dirname, 'src')

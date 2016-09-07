@@ -53,9 +53,24 @@ module.exports = {
         include: path.join(__dirname, 'src')
       },
       {
+        test: /\.(jpg|png|gif|eot|svg|ttf|woff|woff2)(\?.*)?$/,
+        include: [path.join(__dirname, 'src')],
+        loader: 'file',
+        query: {name: 'images/[name].[ext]'}
+      },
+      {
         test: /\.less/,
         loader: ExtractTextPlugin.extract('css!postcss!less'),
         include: path.join(__dirname, 'src')
+      },
+      {
+        test: /\.(mp4|webm|pdf)(\?.*)?$/,
+        include: path.join(__dirname, 'src'),
+        loader: 'url',
+        query: {
+          limit: 10000,
+          name: 'media/[name].[ext]'
+        }
       }
     ]
   },
