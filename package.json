@@ -14,6 +14,8 @@
     "l10n"
   ],
   "dependencies": {
+    "fs-finder": "^1.8.1",
+    "lodash": "^4.15.0",
     "yeoman-generator": "^0.24.1"
   }
 }
