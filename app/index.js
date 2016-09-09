@@ -22,6 +22,7 @@ module.exports = generators.Base.extend({
     this.directory(this.templatePath('src'), this.destinationPath('src'));
     this.directory(this.templatePath('tests'), this.destinationPath('tests'));
     this.fs.copy(this.templatePath('.gitignore'), this.destinationPath('.gitignore'));
+    this.fs.copy(this.templatePath('README.md'), this.destinationPath('README.md'));
     this.fs.copy(this.templatePath('build.js'), this.destinationPath('build.js'));
     this.fs.copy(this.templatePath('webpack.config.prod.js'), this.destinationPath('webpack.config.prod.js'));
     this.fs.copyTpl(this.templatePath('server.js'), this.destinationPath('server.js'), tpls);
