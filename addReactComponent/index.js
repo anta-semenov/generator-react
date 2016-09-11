@@ -4,10 +4,6 @@ var finder = require('fs-finder');
 var j = require('jscodeshift/dist/core');
 
 module.exports = generators.Base.extend({
-  constructor: function () {
-    generators.Base.apply(this, arguments);
-  },
-
   prompting: function () {
     let componentsPaths = finder.from(this.destinationPath('src/components')).findFiles('*/<[A-Z][a-z][A-Za-z0-9]+>.js')
     const components = componentsPaths.map(item => {
@@ -23,24 +19,62 @@ module.exports = generators.Base.extend({
        message: 'Name of new component'
       },
       {
+        type: 'list',
+        name: 'shouldContinue',
+        message: 'Component name is already in use. Existing component will be replaced by new one. Should we continue?',
+        choices: [{name: 'yes', value: 'yes'}, {name: 'no', value: 'no'}],
+        default: 1,
+        when: answers => {
+          const componentName = _.upperFirst(_.camelCase(answers.componentName))
+          if (components.findIndex(item => item.name === componentName) !== -1) {
+            return true
+          }
+          return false
+        }
+      },
+      {
        type: 'list',
        name: 'createReduxConnect',
        message: 'Should we connect component to redux?',
        choices: [{name: 'yes', value: 'yes'}, {name: 'no', value: 'no'}],
-       default: 1
+       default: 1,
+       when: answers => {
+         if (answers.shouldContinue === 'no') {
+           return false
+         }
+         return true
+       }
       },
       {
        type: 'list',
        name: 'parentComponent',
        message: 'Pick parent component if need',
        choices: parentComponents,
-       default: 0
+       default: 0,
+       when: answers => {
+         if (answers.shouldContinue === 'no') {
+           return false
+         }
+         return true
+       }
       },
       {
        type: 'checkbox',
        name: 'importToComponents',
        message: 'Check components where new component should be imported in',
-       choices: components
+       choices: components,
+       default: answers => {
+         if (answers.parentComponent !== '') {
+           return [answers.parentComponent]
+         }
+         return []
+       },
+       when: answers => {
+         if (answers.shouldContinue === 'no') {
+           return false
+         }
+         return true
+       }
       }
     ]).then(answers => {
       this.props = answers
@@ -49,6 +83,9 @@ module.exports = generators.Base.extend({
   },
 
   writing: function () {
+    if (this.props.shouldContinue === 'no') {
+      return
+    }
     this.conflicter.force = true
     const componentName = _.upperFirst(_.camelCase(this.props.componentName))
 
@@ -81,10 +118,12 @@ module.exports = generators.Base.extend({
       })
     }
 
-    let relativePath = destFolder.replace(
+    //add alias to webpack configs
+    const relativePath = destFolder.replace(
       /^.*\/(?=src\/components)/,
       './'
-    )
+    ) + (this.props.createReduxConnect === 'yes' ? _.lowerFirst(componentName)+'Connect' : componentName)
+    + '.js'
 
     this.fs.write(
       this.destinationPath('webpack.config.dev.js'),
@@ -97,24 +136,29 @@ module.exports = generators.Base.extend({
   }
 })
 
-function transformer(file, componentName, componentRelativePath) {
+function transformer(file, aliasName, componentRelativePath) {
   const ast = j(file)
 
   const componentAlias = j.property(
     'init',
-    j.identifier(`_${componentName}`),
+    j.identifier(`_${aliasName}`),
     j.callExpression(
       j.memberExpression(j.identifier('path'), j.identifier('resolve'), false),
-      [j.literal(componentRelativePath + componentName + '.js')]
+      [j.literal(componentRelativePath)]
     )
   )
 
-  const mutations = ast.find(j.Property, {key: {name: 'alias'}})
-  .replaceWith(p => {
-    p.node.value.properties.push(componentAlias)
-    return p.node
-  }).size()
+  let mutations = ast.find(j.Property, {key: {name: `_${aliasName}`}})
+  .replaceWith(componentAlias)
+  .size()
 
+  if (!mutations) {
+    mutations = ast.find(j.Property, {key: {name: 'alias'}})
+    .replaceWith(p => {
+      p.node.value.properties.push(componentAlias)
+      return p.node
+    }).size()
+  }
 
   if (!mutations) {
     const aliasProperty = j.property('init', j.identifier('alias'), j.objectExpression([componentAlias]))
