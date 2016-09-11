@@ -1,6 +1,6 @@
 var generators = require('yeoman-generator');
 var dependencies = require('./dependencies');
-var lodash = require('lodash');
+var _ = require('lodash');
 
 module.exports = generators.Base.extend({
   constructor: function () {
@@ -13,14 +13,35 @@ module.exports = generators.Base.extend({
     this.config.save();
   },
 
+  prompting: function () {
+    return this.prompt([
+      {
+        type: 'input',
+        name: 'appname',
+        message: 'Name of app',
+        default: _.kebabCase(this.appname)
+      },
+      {
+        type: 'input',
+        name: 'port',
+        message: 'Type port where webpack dev server should ru',
+        default: '3000'
+      }
+    ]).then(answers => {
+      this.props = answers
+      this.async()
+    })
+  },
+
   writing: function () {
     var tpls = {
-      appName: this.appname,
-      port: this.options.port
+      appName: this.props.appname,
+      port: this.props.port
     }
     //copy templates
     this.directory(this.templatePath('src'), this.destinationPath('src'));
     this.directory(this.templatePath('tests'), this.destinationPath('tests'));
+    this.directory(this.templatePath('localizations'), this.destinationPath('localizations'));
     this.fs.copy(this.templatePath('.gitignore'), this.destinationPath('.gitignore'));
     this.fs.copy(this.templatePath('README.md'), this.destinationPath('README.md'));
     this.fs.copy(this.templatePath('build.js'), this.destinationPath('build.js'));
