@@ -12,6 +12,11 @@ module.exports = {
     path: path.join(__dirname, 'dist'),
     filename: 'bundle.js'
   },
+  resolve: {
+    alias: {
+      '_styleVariables.less': path.resolve('./src/constants/styleVariables.less')
+    }
+  },
   plugins: [
     new HtmlWebpackPlugin({
       inject: true,
