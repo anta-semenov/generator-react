@@ -75,7 +75,20 @@ module.exports = generators.Base.extend({
          }
          return true
        }
+     },
+     {
+      type: 'list',
+      name: 'createTests',
+      message: 'Should we create tests file for component (will be created in the component folder and will have suffix "test")?',
+      choices: [{name: 'yes', value: 'yes'}, {name: 'no', value: 'no'}],
+      default: 1,
+      when: answers => {
+        if (answers.shouldContinue === 'no') {
+          return false
+        }
+        return true
       }
+     }
     ]).then(answers => {
       this.props = answers
       this.async()
@@ -99,10 +112,10 @@ module.exports = generators.Base.extend({
     destFolder = _.trimEnd(destFolder, '/') + '/'
 
     this.fs.copy(this.templatePath('component.less'), `${destFolder}${componentName}.less`)
-    this.fs.copyTpl(this.templatePath('reactFuncFile.js'), `${destFolder}${componentName}.js`, {componentName: componentName})
+    this.fs.copyTpl(this.templatePath('reactFuncFile.js'), `${destFolder}${componentName}.js`, {componentName})
 
     if (this.props.createReduxConnect === 'yes') {
-      this.fs.copyTpl(this.templatePath('reduxConnect.js'), `${destFolder}${_.lowerFirst(componentName)+'Connect'}.js`, {componentName: componentName})
+      this.fs.copyTpl(this.templatePath('reduxConnect.js'), `${destFolder}${_.lowerFirst(componentName)+'Connect'}.js`, {componentName})
     }
 
     if (Array.isArray(this.props.importToComponents)) {
@@ -116,6 +129,10 @@ module.exports = generators.Base.extend({
           ))
         }
       })
+    }
+
+    if (this.props.createTests === 'yes') {
+      this.fs.copyTpl(this.templatePath('react.test.js'), `${destFolder}${componentName}.test.js`, {componentName})
     }
 
     //add alias to webpack configs

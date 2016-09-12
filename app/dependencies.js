@@ -23,6 +23,7 @@ module.exports = {
     "postcss",
     "postcss-loader",
     "react-hot-loader",
+    "react-addons-test-utils",
     "redux-devtools",
     "redux-devtools-dock-monitor",
     "redux-devtools-log-monitor",
