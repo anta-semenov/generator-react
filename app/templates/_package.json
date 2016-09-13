@@ -5,8 +5,8 @@
   "main": "server.js",
   "scripts": {
     "start": "NODE_ENV=dev node server.js",
-    "test": "mocha --compilers js:babel-core/register --require ./tests/test_helper.js './**/*.test.@(js|jsx)'",
-    "test:watch": "npm test -- --watch",
+    "test": "jest",
+    "test:watch": "jest --watch",
     "deploy": "node build.js"
   },
   "dependencies": {},
