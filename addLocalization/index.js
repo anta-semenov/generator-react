@@ -22,7 +22,7 @@ module.exports = generators.Base.extend({
           }
           const localizationPaths = finder.in(this.destinationPath('localizations')).findFiles('/*.json')
           const localizations = localizationPaths.map(item => item.split('/').reverse()[0].split('.')[0])
-          
+
           if (localizations.findIndex(item => item === _.lowerCase(answers.locale)) !== -1) {
             return true
           }
