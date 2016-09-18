@@ -1,6 +1,7 @@
 var generators = require('yeoman-generator');
 var dependencies = require('./dependencies');
 var _ = require('lodash');
+var finder = require('fs-finder');
 
 module.exports = generators.Base.extend({
   constructor: function () {
@@ -55,5 +56,12 @@ module.exports = generators.Base.extend({
   install: function () {
     this.npmInstall(dependencies.main, {save: true});
     this.npmInstall(dependencies.dev, {saveDev: true});
+  }
+
+  end: function () {
+    const paths = finder.from(this.destinationPath('')).findFiles('*/.DS_Store')
+    paths.forEach(path => {
+      this.fs.delete(path)
+    })
   }
 });
