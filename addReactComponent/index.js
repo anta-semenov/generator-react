@@ -142,14 +142,23 @@ module.exports = generators.Base.extend({
     ) + (this.props.createReduxConnect === 'yes' ? _.lowerFirst(componentName)+'Connect' : componentName)
     + '.js'
 
-    this.fs.write(
-      this.destinationPath('webpack.config.dev.js'),
-      transformer(this.fs.read(this.destinationPath('webpack.config.dev.js')), componentName, relativePath)
-    )
-    this.fs.write(
-      this.destinationPath('webpack.config.prod.js'),
-      transformer(this.fs.read(this.destinationPath('webpack.config.prod.js')), componentName, relativePath)
-    )
+    //check if we have webpackModuleAlias file
+    const aliasFilePath = finder.from(this.destinationPath()).findFirst().findFiles('*/webpackModuleAlias.js')
+    if (aliasFilePath) {
+      this.fs.write(
+        aliasFilePath,
+        transformerModuleAlias(this.fs.read(aliasFilePath), componentName, relativePath)
+      )
+    } else {
+      this.fs.write(
+        this.destinationPath('webpack.config.dev.js'),
+        transformer(this.fs.read(this.destinationPath('webpack.config.dev.js')), componentName, relativePath)
+      )
+      this.fs.write(
+        this.destinationPath('webpack.config.prod.js'),
+        transformer(this.fs.read(this.destinationPath('webpack.config.prod.js')), componentName, relativePath)
+      )
+    }
   }
 })
 
@@ -193,5 +202,27 @@ function transformer(file, aliasName, componentRelativePath) {
       )
     }
   }
+  return ast.toSource({quote: 'single', tabWidth: 2})
+};
+
+function transformerModuleAlias(file, aliasName, componentRelativePath) {
+  const ast = j(file)
+
+  const componentAlias = j.property(
+    'init',
+    j.identifier(`_${aliasName}`),
+    j.callExpression(
+      j.memberExpression(j.identifier('path'), j.identifier('resolve'), false),
+      [j.literal(componentRelativePath)]
+    )
+  )
+
+  let mutations = ast.find(j.ObjectExpression}})
+  .replaceWith(p => {
+    p.node.properties.push(componentAlias)
+    return p.node
+  })
+  .size()
+  
   return ast.toSource({quote: 'single', tabWidth: 2})
 };
