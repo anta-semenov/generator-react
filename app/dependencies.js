@@ -15,6 +15,8 @@ module.exports = {
     "cssnano",
     "eslint",
     "eslint-plugin-react",
+    "eslint-plugin-import",
+    "eslint-import-resolver-webpack",
     "extract-text-webpack-plugin",
     "html-webpack-plugin",
     "less",
