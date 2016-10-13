@@ -10,7 +10,7 @@ module.exports = {
     "babel-preset-react",
     "babel-preset-stage-0",
     "babel-preset-stage-1",
-    "babel-jest"
+    "babel-jest",
     "css-loader",
     "cssnano",
     "eslint",

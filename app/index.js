@@ -54,9 +54,9 @@ module.exports = generators.Base.extend({
   },
 
   install: function () {
-    this.npmInstall(dependencies.main, {save: true});
-    this.npmInstall(dependencies.dev, {saveDev: true});
-  }
+    this.spawnCommandSync('yarn', ['add', ...dependencies.main])
+    this.spawnCommandSync('yarn', ['add', ...dependencies.dev], {dev: true})
+  },
 
   end: function () {
     const paths = finder.from(this.destinationPath('')).findFiles('*/.DS_Store')
