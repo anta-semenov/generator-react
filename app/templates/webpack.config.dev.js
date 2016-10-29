@@ -1,7 +1,7 @@
-var path = require('path');
-var webpack = require('webpack');
-var HtmlWebpackPlugin = require('html-webpack-plugin');
-var alias = reruire('./webpackModuleAlias');
+var path = require('path')
+var webpack = require('webpack')
+var HtmlWebpackPlugin = require('html-webpack-plugin')
+var alias = require('./webpackModuleAlias')
 
 module.exports = {
   devtool: 'eval',

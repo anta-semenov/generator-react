@@ -217,12 +217,12 @@ function transformerModuleAlias(file, aliasName, componentRelativePath) {
     )
   )
 
-  let mutations = ast.find(j.ObjectExpression}})
+  let mutations = ast.find(j.ObjectExpression)
   .replaceWith(p => {
     p.node.properties.push(componentAlias)
     return p.node
   })
   .size()
-  
+
   return ast.toSource({quote: 'single', tabWidth: 2})
 };

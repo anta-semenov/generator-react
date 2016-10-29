@@ -44,6 +44,7 @@ module.exports = generators.Base.extend({
     this.directory(this.templatePath('tests'), this.destinationPath('tests'));
     this.directory(this.templatePath('localizations'), this.destinationPath('localizations'));
     this.fs.copy(this.templatePath('.gitignore'), this.destinationPath('.gitignore'));
+    this.fs.copy(this.templatePath('.eslint'), this.destinationPath('.eslint'));
     this.fs.copy(this.templatePath('README.md'), this.destinationPath('README.md'));
     this.fs.copy(this.templatePath('build.js'), this.destinationPath('build.js'));
     this.fs.copy(this.templatePath('webpack.config.prod.js'), this.destinationPath('webpack.config.prod.js'));
@@ -55,7 +56,7 @@ module.exports = generators.Base.extend({
 
   install: function () {
     this.spawnCommandSync('yarn', ['add', ...dependencies.main])
-    this.spawnCommandSync('yarn', ['add', ...dependencies.dev], {dev: true})
+    this.spawnCommandSync('yarn', ['add', ...dependencies.dev, '--dev'])
   },
 
   end: function () {

@@ -1,10 +1,10 @@
-var path = require('path');
-var webpack = require('webpack');
-var autoprefixer = require('autoprefixer');
+var path = require('path')
+var webpack = require('webpack')
+var autoprefixer = require('autoprefixer')
 var cssnano = require('cssnano')
-var HtmlWebpackPlugin = require('html-webpack-plugin');
-var ExtractTextPlugin = require('extract-text-webpack-plugin');
-var alias = reruire('./webpackModuleAlias');
+var HtmlWebpackPlugin = require('html-webpack-plugin')
+var ExtractTextPlugin = require('extract-text-webpack-plugin')
+var alias = require('./webpackModuleAlias')
 
 module.exports = {
   devtool: 'cheap-module-source-map',
