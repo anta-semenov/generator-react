@@ -13,16 +13,5 @@
   "devDependencies": {},
   "keywords": [],
   "author": "Anton Semenov",
-  "license": "MIT",
-  "babel": {
-    "presets": [
-      "es2015",
-      "stage-0",
-      "stage-1",
-      "react"
-    ],
-    "plugins": [
-      "react-hot-loader/babel"
-    ]
-  }
+  "license": "MIT"
 }
