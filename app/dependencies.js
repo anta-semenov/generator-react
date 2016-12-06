@@ -25,7 +25,7 @@ module.exports = {
     "jasmine-immutablejs-matchers",
     "postcss",
     "postcss-loader",
-    "react-hot-loader",
+    "react-hot-loader@1.3.1",
     "react-addons-test-utils",
     "react-test-renderer",
     "redux-devtools",
