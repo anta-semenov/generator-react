@@ -48,6 +48,13 @@ module.exports = {
       }
     },
     {
+      test: /\.html$/,
+      loader: 'html',
+      query: {
+        attrs: ['link:href'],
+      }
+      }
+    {
       test: /\.less$/,
       loader: 'style-loader!css-loader!postcss-loader!less-loader',
       include: path.join(__dirname, 'src')

@@ -75,6 +75,13 @@ module.exports = {
           limit: 10000,
           name: 'media/[name].[ext]'
         }
+      },
+      {
+        test: /\.html$/,
+        loader: 'html',
+        query: {
+          attrs: ['link:href'],
+        }
       }
     ]
   },

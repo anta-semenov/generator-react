@@ -19,6 +19,7 @@ module.exports = {
     "eslint-import-resolver-webpack",
     "extract-text-webpack-plugin",
     "html-webpack-plugin",
+    "html-loader",
     "less",
     "less-loader",
     "jest-cli",

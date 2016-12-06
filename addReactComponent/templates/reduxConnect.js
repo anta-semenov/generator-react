@@ -1,6 +1,6 @@
 import {connect} from 'react-redux'
 import <%= componentName %> from './<%= componentName %>'
-import actions from '_actions'
+import * as actions from '_actions'
 import * as fromReducer from '_reducer'
 
 const mapStateToProps = state => ({
