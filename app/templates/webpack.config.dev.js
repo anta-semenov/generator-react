@@ -23,6 +23,7 @@ module.exports = {
       inject: true,
       template: './index.html'
     }),
+    new webpack.OldWatchingPlugin(),
     new webpack.HotModuleReplacementPlugin()
   ],
   module: {

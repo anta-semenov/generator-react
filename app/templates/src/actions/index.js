@@ -1,1 +1,1 @@
-import actionTypes from '_actionTypes'
+import * as actionTypes from '_actionTypes'
