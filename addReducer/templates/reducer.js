@@ -8,3 +8,7 @@ const <%= reducerName %> = (state, action) => {
 }
 
 export default <%= reducerName %>
+
+/*
+ Selectors
+*/

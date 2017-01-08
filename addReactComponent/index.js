@@ -1,9 +1,9 @@
-var generators = require('yeoman-generator');
+var Generator = require('yeoman-generator');
 var _ = require('lodash');
 var finder = require('fs-finder');
 var j = require('jscodeshift/dist/core');
 
-module.exports = generators.Base.extend({
+module.exports = Generator.extend({
   prompting: function () {
     let componentsPaths = finder.from(this.destinationPath('src/components')).findFiles('*/<[A-Z][a-z][A-Za-z0-9]+>.js')
     const components = componentsPaths.map(item => {

@@ -1,8 +1,8 @@
-var generators = require('yeoman-generator');
+var Generator = require('yeoman-generator');
 var _ = require('lodash');
 var finder = require('fs-finder');
 
-module.exports = generators.Base.extend({
+module.exports = Generator.extend({
   prompting: function () {
     return this.prompt([
       {

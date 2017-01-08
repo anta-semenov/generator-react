@@ -1,11 +1,11 @@
-var generators = require('yeoman-generator');
+var Generator = require('yeoman-generator');
 var dependencies = require('./dependencies');
 var _ = require('lodash');
 var finder = require('fs-finder');
 
-module.exports = generators.Base.extend({
+module.exports = Generator.extend({
   constructor: function () {
-    generators.Base.apply(this, arguments);
+    Generator.apply(this, arguments);
 
     this.option('port', {type: 'String', defaults: '3000', desc: 'port where webpack dev server will run'})
   },
@@ -41,7 +41,6 @@ module.exports = generators.Base.extend({
     }
     //copy templates
     this.directory(this.templatePath('src'), this.destinationPath('src'));
-    this.directory(this.templatePath('tests'), this.destinationPath('tests'));
     this.directory(this.templatePath('localizations'), this.destinationPath('localizations'));
     this.fs.copy(this.templatePath('.gitignore'), this.destinationPath('.gitignore'));
     this.fs.copy(this.templatePath('.eslintrc'), this.destinationPath('.eslintrc'));

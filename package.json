@@ -17,6 +17,6 @@
     "fs-finder": "^1.8.1",
     "jscodeshift": "^0.3.28",
     "lodash": "^4.15.0",
-    "yeoman-generator": "^0.24.1"
+    "yeoman-generator": "^1.0.1"
   }
 }
