@@ -7,7 +7,29 @@ var loophole = require('loophole')
 module.exports = Generator.extend({
   prompting: function () {
     const reducersPaths = finder.from(this.destinationPath('src/reducer/')).findFiles('*/<[A-Za-z0-9]+>.js')
-    const reducers = reducersPaths.map(item => item.split('/').reverse()[0].split('.')[0])
+    const reducers = reducersPaths.map(item => {
+      const pathParts = item.split('/').reverse()
+      const filename = pathParts[0].split('.')[0]
+      if (filename !== 'index') {
+        return ({
+          value: item,
+          id: filename,
+          name: filename
+        })
+      } else if (pathParts[1] === 'reducer') {
+        return ({
+          value: item,
+          id: 'rootReducer',
+          name: 'rootReducer'
+        })
+      } else {
+        return ({
+          value: item,
+          id: pathParts[1],
+          name: pathParts[1]
+        })
+      }
+    })
 
     return this.prompt([
       {
@@ -23,10 +45,36 @@ module.exports = Generator.extend({
         default: 1,
         when: answers => {
           const reducerName = _.camelCase(answers.reducerName)
-          if (reducers.findIndex(item => item === reducerName) !== -1) {
+          if (reducers.findIndex(item => item.id === reducerName) !== -1) {
             return true
           }
           return false
+        }
+      },
+      {
+        type: 'list',
+        name: 'reducerType',
+        message: 'Select type of reducer',
+        choices: [{name: 'simple', value: 'simple'}, {name: 'complex', value: 'complex'}],
+        default: 0,
+        when: answers => {
+          if (answers.shouldContinue === 'no') {
+            return false
+          }
+          return true
+        }
+      },
+      {
+        type: 'list',
+        name: 'baseReducer',
+        message: 'Select reducer where to import new one',
+        choices: reducers.filter(item => !!item.value),
+        default: 0,
+        when: answers => {
+          if (answers.shouldContinue === 'no') {
+            return false
+          }
+          return true
         }
       },
       {
@@ -36,7 +84,7 @@ module.exports = Generator.extend({
        choices: [{name: 'yes', value: 'yes'}, {name: 'no', value: 'no'}],
        default: 0,
        when: answers => {
-         if (answers.shouldContinue === 'no') {
+         if (answers.shouldContinue === 'no' || answers.reducerType === 'complex') {
            return false
          }
          return true
@@ -57,27 +105,43 @@ module.exports = Generator.extend({
     const reducerName = _.camelCase(this.props.reducerName)
 
     //obtain reducer folder
-    let reducerFolder = finder.from(this.destinationPath('src')).findDirectory('reducer')
-    let rootReducer
-    if (!reducerFolder) {
-      reducerFolder = finder.from(this.destinationPath('src')).findFile('*/<rootReducer|reducer>.js')
-      if (reducerFolder) {
-        rootReducer = reducerFolder
-        reducerFolder = reducerFolder.replace('/reducer.js', '')
-      }
-    }
+    const baseReducerPathParts = this.props.baseReducer.split('/')
+    baseReducerPathParts.pop()
+    let reducerFolder = baseReducerPathParts.join('/')
+    // let rootReducer
+    // if (!reducerFolder) {
+    //   reducerFolder = finder.from(this.destinationPath('src')).findFile('*/<rootReducer|reducer>.js')
+    //   if (reducerFolder) {
+    //     rootReducer = reducerFolder
+    //     reducerFolder = reducerFolder.replace('/reducer.js', '')
+    //   }
+    // }
+    const actionTypesPreffix = baseReducerPathParts.slice(baseReducerPathParts.findIndex(item => item === 'src'))
+      .reverse()
+      .reduce((result, item) => {
+        if (item !== 'src') {
+          return `../${result}`
+        }
+        return result
+      }, '')
+    const actionTypesPath = `${actionTypesPreffix}${getActionTypesPath(this.destinationPath('src'))}`
 
     //copy files
-    this.fs.copyTpl(this.templatePath('reducer.js'), `${reducerFolder}/${reducerName}.js`, {reducerName})
-    if (this.props.createTests === 'yes') {
-      this.fs.copyTpl(this.templatePath('reducer.test.js'), `${reducerFolder}/${reducerName}.test.js`, {reducerName})
+    if (this.props.reducerType === 'simple') {
+      this.fs.copyTpl(this.templatePath('reducer.js'), `${reducerFolder}/${reducerName}.js`, {reducerName, actionTypesPath})
+      if (this.props.createTests === 'yes') {
+        this.fs.copyTpl(this.templatePath('reducer.test.js'), `${reducerFolder}/${reducerName}.test.js`, {reducerName})
+      }
+    } else {
+      this.fs.copyTpl(this.templatePath('complexReducer.js'), `${reducerFolder}/${reducerName}/index.js`, {reducerName})
     }
 
+
     //import new reducer to root reducer
-    rootReducer = rootReducer || `${reducerFolder}/index.js`
+    //rootReducer = rootReducer || `${reducerFolder}/index.js`
     this.fs.write(
-      rootReducer,
-      transformer(this.fs.read(rootReducer), reducerName)
+      this.props.baseReducer,
+      transformer(this.fs.read(this.props.baseReducer), reducerName)
         .replace(/;\r\n|;\n/g, '\n')
         .replace(/\n\n(?=import)/g, '\n')
         .replace(/if \(key === 'default'\)\n(?=\s*return)/g, 'if (key === \'default\') ')
@@ -176,4 +240,22 @@ function getExportFromReducerNode(reducerName) {
       true
     )]
   ))
+}
+
+function getActionTypesPath(srcPath) {
+  let actionTypesPath = finder.from(srcPath).findFiles('*/actionTypes.js')
+  if (Array.isArray(actionTypesPath) && actionTypesPath.length > 0) {
+    return getInSrcPathPart(`${srcPath}/`, actionTypesPath[0])
+  }
+
+  actionTypesPath = finder.from(srcPath).findFiles('*/constants/actions.js')
+  if (Array.isArray(actionTypesPath) && actionTypesPath.length > 0) {
+    return getInSrcPathPart(`${srcPath}/`, actionTypesPath[0])
+  }
+
+  return '_actionTypes'
+}
+
+function getInSrcPathPart(srcPath, destinationPath) {
+  return destinationPath.substr(srcPath.length)
 }
