@@ -1,8 +1,10 @@
 var Generator = require('yeoman-generator');
 var _ = require('lodash');
 var finder = require('fs-finder');
-var j = require('jscodeshift/dist/core');
 var loophole = require('loophole')
+var transformer = require('./transformers')
+var utils = require('./utils')
+var path = require('path')
 
 module.exports = Generator.extend({
   prompting: function () {
@@ -32,6 +34,20 @@ module.exports = Generator.extend({
     })
 
     return this.prompt([
+      {
+        type: 'list',
+        name: 'initResolvingPaths',
+        message: 'Setup question: how shoud we import new components',
+        choices: [
+          {name: 'Relative path', value: 'relative'},
+          {name: 'Webpack alias', value: 'alias'},
+          {name: 'Webpack root directory', value: 'rootDirectory'}
+        ],
+        when: () => {
+          if (this.config.get('initResolvingPaths')) return false
+          return true
+        }
+      },
       {
        type: 'input',
        name: 'reducerName',
@@ -97,6 +113,11 @@ module.exports = Generator.extend({
   },
 
   writing: function () {
+    if (this.props.initResolvingPaths && !this.config.get('initResolvingPaths')) {
+      this.config.set('initResolvingPaths', this.props.initResolvingPaths)
+    }
+    const resolvingPath = this.config.get('initResolvingPaths') || this.props.initResolvingPaths
+
     if (this.props.shouldContinue === 'no') {
       return
     }
@@ -105,9 +126,7 @@ module.exports = Generator.extend({
     const reducerName = _.camelCase(this.props.reducerName)
 
     //obtain reducer folder
-    const baseReducerPathParts = this.props.baseReducer.split('/')
-    baseReducerPathParts.pop()
-    let reducerFolder = baseReducerPathParts.join('/')
+    const reducerFolder = path.dirname(this.props.baseReducer)
     // let rootReducer
     // if (!reducerFolder) {
     //   reducerFolder = finder.from(this.destinationPath('src')).findFile('*/<rootReducer|reducer>.js')
@@ -116,15 +135,11 @@ module.exports = Generator.extend({
     //     reducerFolder = reducerFolder.replace('/reducer.js', '')
     //   }
     // }
-    const actionTypesPreffix = baseReducerPathParts.slice(baseReducerPathParts.findIndex(item => item === 'src'))
-      .reverse()
-      .reduce((result, item) => {
-        if (item !== 'src') {
-          return `../${result}`
-        }
-        return result
-      }, '')
-    const actionTypesPath = `${actionTypesPreffix}${getActionTypesPath(this.destinationPath('src'))}`
+
+    let actionTypesPath = utils.getActionTypesPath(this.destinationPath('src'))
+    if (!actionTypesPath.startsWith('_')) {
+      actionTypesPath = path.relative(reducerFolder, actionTypesPath)
+    }
 
     //copy files
     if (this.props.reducerType === 'simple') {
@@ -149,113 +164,3 @@ module.exports = Generator.extend({
     )
   }
 })
-
-function transformer(source, reducerName) {
-  const ast = j(source)
-  let mutations1, mutations2, mutations3
-
-  if (ast.find(j.ImportDeclaration, {source: {value: `./${reducerName}`}}).size() === 0) {
-    mutations1 = ast.find(j.ImportDeclaration).at(-1)
-    .insertAfter(j.importDeclaration(
-      [j.importDefaultSpecifier(j.identifier(reducerName)), j.importNamespaceSpecifier(j.identifier(`from${_.upperFirst(reducerName)}`))],
-      j.literal(`./${reducerName}`)
-    )).size()
-  }
-
-  if (ast.find(j.Property, {key: {name: reducerName}, value: {name: reducerName}, shorthand: true}).size() === 0) {
-    mutations2 = ast.find(j.CallExpression, {callee: {name: 'combineReducers'}}).replaceWith(p => {
-      const reducerProperty = j.property('init', j.identifier(reducerName), j.identifier(reducerName))
-      reducerProperty.shorthand = true
-      p.node.arguments[0].properties.push(reducerProperty)
-      return p.node
-    }).size()
-  }
-
-  if (ast.find(j.CallExpression, {calee: {property: {name: 'keys'}}, arguments: [{name: `from${_.upperFirst(reducerName)}`}]}).size() === 0) {
-    const exportFromReducer = ast.find(j.MemberExpression, {
-      property: {name: 'key'},
-      object: {
-        property: {name: 'exports'},
-        object: {name: 'module'}
-      }
-    })
-
-    mutations3 = true
-    if (exportFromReducer.size() !== 0) {
-      exportFromReducer.at(-1).closest(j.ExpressionStatement).closest(j.ExpressionStatement).insertAfter(getExportFromReducerNode(reducerName))
-    } else {
-      ast.find(j.ExportDefaultDeclaration).at(0).insertAfter(getExportFromReducerNode(reducerName))
-    }
-  }
-
-  if (mutations1 || mutations2 || mutations3) {
-    return ast.toSource({quote: 'single', tabWidth: 2, flowObjectCommas: false})
-  }
-
-  return source
-}
-
-function getExportFromReducerNode(reducerName) {
-  const fromReducer = j.identifier(`from${_.upperFirst(reducerName)}`)
-  const reducer = j.identifier(reducerName)
-  const key = j.identifier('key')
-  const ifDefault = j.ifStatement(
-    j.binaryExpression('===', key, j.literal('default')),
-    j.returnStatement(null))
-
-  const exportKeys = j.expressionStatement(
-    j.assignmentExpression(
-      '=',
-      j.memberExpression(
-        j.memberExpression(j.identifier('module'), j.identifier('exports'), false),
-        j.identifier('key'),
-        true
-      ),
-      j.arrowFunctionExpression(
-        [j.identifier('state')],
-        j.callExpression(
-          j.memberExpression(fromReducer, key, true),
-          [j.memberExpression(j.identifier('state'), reducer, false)]
-        ),
-        true
-      )
-    )
-  )
-
-  return j.expressionStatement(j.callExpression(
-  	j.memberExpression(
-      j.callExpression(
-        j.memberExpression(j.identifier('Object'), j.identifier('keys'), false),
-        [fromReducer]
-      ),
-      j.identifier('forEach'),
-      false
-    ),
-    [j.arrowFunctionExpression(
-      [key],
-      j.blockStatement([
-        ifDefault,
-        exportKeys
-      ]),
-      true
-    )]
-  ))
-}
-
-function getActionTypesPath(srcPath) {
-  let actionTypesPath = finder.from(srcPath).findFiles('*/actionTypes.js')
-  if (Array.isArray(actionTypesPath) && actionTypesPath.length > 0) {
-    return getInSrcPathPart(`${srcPath}/`, actionTypesPath[0])
-  }
-
-  actionTypesPath = finder.from(srcPath).findFiles('*/constants/actions.js')
-  if (Array.isArray(actionTypesPath) && actionTypesPath.length > 0) {
-    return getInSrcPathPart(`${srcPath}/`, actionTypesPath[0])
-  }
-
-  return '_actionTypes'
-}
-
-function getInSrcPathPart(srcPath, destinationPath) {
-  return destinationPath.substr(srcPath.length)
-}

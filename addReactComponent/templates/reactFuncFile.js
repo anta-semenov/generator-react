@@ -1,6 +1,5 @@
 import React from 'react'
-import './<%= componentName %>.less'
-
+<%= styleImport %>
 const <%= componentName %> = (props) => (
   <div>
 

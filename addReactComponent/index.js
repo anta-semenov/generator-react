@@ -1,7 +1,9 @@
 var Generator = require('yeoman-generator');
 var _ = require('lodash');
 var finder = require('fs-finder');
-var j = require('jscodeshift/dist/core');
+var transformers = require('./transformers')
+var path = require('path')
+var utils = require('./utils')
 
 module.exports = Generator.extend({
   prompting: function () {
@@ -12,7 +14,55 @@ module.exports = Generator.extend({
     })
     let parentComponents = [...components]
     parentComponents.splice(0, 0, {name: '', value: ''})
+
     return this.prompt([
+      {
+        type: 'list',
+        name: 'initProjectType',
+        message: 'Setup question: is this a React or React Native project?',
+        choices: [
+          {name: 'React', value: 'react'},
+          {name: 'React Native', value: 'reactNative'}
+        ],
+        when: () => {
+          if (this.config.get('initProjectType')) return false
+          return true
+        }
+      },
+      {
+        type: 'list',
+        name: 'initResolvingPaths',
+        message: 'Setup question: how shoud we import new components?',
+        choices: [
+          {name: 'Relative path', value: 'relative'},
+          {name: 'Webpack alias', value: 'alias'},
+          {name: 'Webpack root directory', value: 'rootDirectory'}
+        ],
+        when: answers => {
+          if ((this.config.get('initProjectType') || answers.initProjectType) === 'reactNative') {
+            return false
+          }
+          if (this.config.get('initResolvingPaths')) return false
+          return true
+        }
+      },
+      {
+        type: 'list',
+        name: 'initStylePreprocessor',
+        message: 'Setup question: what style preprocessor do you use?',
+        choices: [
+          {name: 'Less', value: 'less'},
+          {name: 'Sass/SCSS', value: 'scss'},
+          {name: 'PostCSS or plain CSS', value: 'css'}
+        ],
+        when: answers => {
+          if ((this.config.get('initProjectType') || answers.initProjectType) === 'reactNative') {
+            return false
+          }
+          if (this.config.get('initStylePreprocessor')) return false
+          return true
+        }
+      },
       {
        type: 'input',
        name: 'componentName',
@@ -96,6 +146,21 @@ module.exports = Generator.extend({
   },
 
   writing: function () {
+    if (this.props.initProjectType && !this.config.get('initProjectType')) {
+      this.config.set('initProjectType', this.props.initProjectType)
+    }
+    const projectType = !this.config.get('initProjectType') || this.props.initProjectType
+
+    if (this.props.initResolvingPaths && !this.config.get('initResolvingPaths') && projectType !== 'reactNative') {
+      this.config.set('initResolvingPaths', this.props.initResolvingPaths)
+    }
+    const resolvingPathMode = projectType === 'reactNative' ? 'relative' : this.config.get('initResolvingPaths') || this.props.initResolvingPaths
+
+    if (this.props.initStylePreprocessor && !this.config.get('initStylePreprocessor') && projectType !== 'reactNative') {
+      this.config.set('initStylePreprocessor', this.props.initStylePreprocessor)
+    }
+    const stylePreprocessor = !this.config.get('initStylePreprocessor') || this.props.initStylePreprocessor
+
     if (this.props.shouldContinue === 'no') {
       return
     }
@@ -106,26 +171,51 @@ module.exports = Generator.extend({
     if (this.props.parentComponent !== '') {
       const parentComponentPath = finder.from(this.destinationPath('src/components')).findFirst().findFiles(`*/${this.props.parentComponent}.js`)
       if (parentComponentPath) {
-        destFolder = _.trimEnd(parentComponentPath, `${this.props.parentComponent}.js`) + _.lowerFirst(componentName)
+        destFolder = `${path.dirname(parentComponentPath)}/${_.lowerFirst(componentName)}`
       }
     }
     destFolder = _.trimEnd(destFolder, '/') + '/'
 
-    this.fs.copy(this.templatePath('component.less'), `${destFolder}${componentName}.less`)
-    this.fs.copyTpl(this.templatePath('reactFuncFile.js'), `${destFolder}${componentName}.js`, {componentName})
+    if (projectType === 'react') {
+      this.fs.copy(this.templatePath('component.less'), `${destFolder}${componentName}.${stylePreprocessor}`)
+    }
+
+    this.fs.copyTpl(
+      this.templatePath('reactFuncFile.js'),
+      `${destFolder}${componentName}.js`,
+      {
+        componentName,
+        styleImport: projectType === 'react' ? `import ./${componentName}.${stylePreprocessor}\n` : ''
+      }
+    )
 
     if (this.props.createReduxConnect === 'yes') {
-      this.fs.copyTpl(this.templatePath('reduxConnect.js'), `${destFolder}${_.lowerFirst(componentName)+'Connect'}.js`, {componentName})
+      this.fs.copyTpl(
+        this.templatePath('reduxConnect.js'),
+        `${destFolder}${_.lowerFirst(componentName)+'Connect'}.js`,
+        {
+          componentName,
+          actionPath: utils.getImportPath(resolvingPathMode, destFolder, utils.getActionsPath(this.destinationPath('src')), '_actions'),
+          reducerPath: utils.getImportPath(resolvingPathMode, destFolder, utils.getReducerPath(this.destinationPath('src')), '_reducer')
+        }
+      )
     }
 
     if (Array.isArray(this.props.importToComponents)) {
+      const importComponentPath = `${destFolder}${this.props.createReduxConnect === 'yes' ? _.lowerFirst(componentName)+'Connect' : componentName}`
       this.props.importToComponents.forEach(destComponentName => {
         const destComponentPath = finder.from(this.destinationPath('src/components')).findFirst().findFiles(`*/${destComponentName}.js`)
         if (destComponentPath) {
+          const componentPath = utils.getImportPath(
+            resolvingPathMode,
+            path.dirname(destComponentPath),
+            importComponentPath,
+            componentName
+          )
           const fileContent = this.fs.read(destComponentPath)
           this.fs.write(destComponentPath, fileContent.replace(
-            /(import[^\n]+'\n|^)(?!import)/,
-            `$1import ${componentName} from '_${componentName}'\n`
+            /(import.*from[^\n]+'\n|^)(?!import)/,
+            `$1import ${componentName} from '${componentPath}'\n`
           ))
         }
       })
@@ -135,94 +225,31 @@ module.exports = Generator.extend({
       this.fs.copyTpl(this.templatePath('react.test.js'), `${destFolder}${componentName}.test.js`, {componentName})
     }
 
-    //add alias to webpack configs
-    const relativePath = destFolder.replace(
-      /^.*\/(?=src\/components)/,
-      './'
-    ) + (this.props.createReduxConnect === 'yes' ? _.lowerFirst(componentName)+'Connect' : componentName)
-    + '.js'
+    if (resolvingPathMode === 'alias') {
+      //add alias to webpack configs
+      const relativePath = destFolder.replace(
+        /^.*\/(?=src\/components)/,
+        './'
+      ) + (this.props.createReduxConnect === 'yes' ? _.lowerFirst(componentName)+'Connect' : componentName)
+      + '.js'
 
-    //check if we have webpackModuleAlias file
-    const aliasFilePath = finder.from(this.destinationPath()).findFirst().findFiles('*/webpackModuleAlias.js')
-    if (aliasFilePath) {
-      this.fs.write(
-        aliasFilePath,
-        transformerModuleAlias(this.fs.read(aliasFilePath), componentName, relativePath)
-      )
-    } else {
-      this.fs.write(
-        this.destinationPath('webpack.config.dev.js'),
-        transformer(this.fs.read(this.destinationPath('webpack.config.dev.js')), componentName, relativePath)
-      )
-      this.fs.write(
-        this.destinationPath('webpack.config.prod.js'),
-        transformer(this.fs.read(this.destinationPath('webpack.config.prod.js')), componentName, relativePath)
-      )
+      //check if we have webpackModuleAlias file
+      const aliasFilePath = finder.from(this.destinationPath()).findFirst().findFiles('*/webpackModuleAlias.js')
+      if (aliasFilePath) {
+        this.fs.write(
+          aliasFilePath,
+          transformers.transformerModuleAlias(this.fs.read(aliasFilePath), componentName, relativePath)
+        )
+      } else {
+        this.fs.write(
+          this.destinationPath('webpack.config.dev.js'),
+          transformers.transformer(this.fs.read(this.destinationPath('webpack.config.dev.js')), componentName, relativePath)
+        )
+        this.fs.write(
+          this.destinationPath('webpack.config.prod.js'),
+          transformers.transformer(this.fs.read(this.destinationPath('webpack.config.prod.js')), componentName, relativePath)
+        )
+      }
     }
   }
 })
-
-function transformer(file, aliasName, componentRelativePath) {
-  const ast = j(file)
-
-  const componentAlias = j.property(
-    'init',
-    j.identifier(`_${aliasName}`),
-    j.callExpression(
-      j.memberExpression(j.identifier('path'), j.identifier('resolve'), false),
-      [j.literal(componentRelativePath)]
-    )
-  )
-
-  let mutations = ast.find(j.Property, {key: {name: `_${aliasName}`}})
-  .replaceWith(componentAlias)
-  .size()
-
-  if (!mutations) {
-    mutations = ast.find(j.Property, {key: {name: 'alias'}})
-    .replaceWith(p => {
-      p.node.value.properties.push(componentAlias)
-      return p.node
-    }).size()
-  }
-
-  if (!mutations) {
-    const aliasProperty = j.property('init', j.identifier('alias'), j.objectExpression([componentAlias]))
-
-    const resolve = ast.find(j.Property, {key: {name: 'resolve'}})
-    .replaceWith(p => {
-      p.node.value.properties.push(aliasProperty)
-      return p.node
-    })
-    .size()
-
-    if (!resolve) {
-      ast.find(j.Property, {key: {name: 'plugins'}}).insertBefore(
-        j.property('init', j.identifier('resolve'), j.objectExpression([aliasProperty]))
-      )
-    }
-  }
-  return ast.toSource({quote: 'single', tabWidth: 2})
-};
-
-function transformerModuleAlias(file, aliasName, componentRelativePath) {
-  const ast = j(file)
-
-  const componentAlias = j.property(
-    'init',
-    j.identifier(`_${aliasName}`),
-    j.callExpression(
-      j.memberExpression(j.identifier('path'), j.identifier('resolve'), false),
-      [j.literal(componentRelativePath)]
-    )
-  )
-
-  let mutations = ast.find(j.ObjectExpression)
-  .replaceWith(p => {
-    p.node.properties.push(componentAlias)
-    return p.node
-  })
-  .size()
-
-  return ast.toSource({quote: 'single', tabWidth: 2})
-};
