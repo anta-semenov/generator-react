@@ -5,8 +5,17 @@ var transformers = require('./transformers')
 var path = require('path')
 var utils = require('./utils')
 
-module.exports = Generator.extend({
-  prompting: function () {
+module.exports = class extends Generator {
+  constructor(args, opts) {
+    super(args, opts)
+
+    this.option('atom', {
+      type: JSON.parse,
+      default: {}
+    })
+  }
+
+  prompting() {
     let componentsPaths = finder.from(this.destinationPath('src/components')).findFiles('*/<[A-Z][a-z][A-Za-z0-9]+>.js')
     const components = componentsPaths.map(item => {
       const value = item.split('/').reverse()[0].split('.')[0]
@@ -143,9 +152,9 @@ module.exports = Generator.extend({
       this.props = answers
       this.async()
     })
-  },
+  }
 
-  writing: function () {
+  writing() {
     if (this.props.initProjectType && !this.config.get('initProjectType')) {
       this.config.set('initProjectType', this.props.initProjectType)
     }
@@ -185,7 +194,7 @@ module.exports = Generator.extend({
       `${destFolder}${componentName}.js`,
       {
         componentName,
-        styleImport: projectType === 'react' ? `import ./${componentName}.${stylePreprocessor}\n` : ''
+        styleImport: projectType === 'react' ? `import './${componentName}.${stylePreprocessor}'\n` : ''
       }
     )
 
@@ -252,4 +261,4 @@ module.exports = Generator.extend({
       }
     }
   }
-})
+}
