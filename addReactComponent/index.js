@@ -114,6 +114,10 @@ module.exports = class extends Generator {
          if (answers.shouldContinue === 'no') {
            return false
          }
+         const atom = this.option.atom
+         if (atom && atom.treeView && atom.directory) {
+           return false
+         }
          return true
        }
       },
@@ -155,6 +159,8 @@ module.exports = class extends Generator {
   }
 
   writing() {
+    const {atom} = this.options
+
     if (this.props.initProjectType && !this.config.get('initProjectType')) {
       this.config.set('initProjectType', this.props.initProjectType)
     }
@@ -182,6 +188,9 @@ module.exports = class extends Generator {
       if (parentComponentPath) {
         destFolder = `${path.dirname(parentComponentPath)}/${_.lowerFirst(componentName)}`
       }
+    }
+    if (atom && atom.treeView && atom.directory) {
+      destFolder = `${atom.directory}/${_.lowerFirst(componentName)}`
     }
     destFolder = _.trimEnd(destFolder, '/') + '/'
 
