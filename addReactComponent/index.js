@@ -80,7 +80,7 @@ module.exports = class extends Generator {
       {
         type: 'list',
         name: 'shouldContinue',
-        message: 'Component name is already in use. Existing component will be replaced by new one. Should we continue?',
+        message: 'Component name is already in use. Existing component could be replaced by new one. Should we continue?',
         choices: [{name: 'yes', value: 'yes'}, {name: 'no', value: 'no'}],
         default: 1,
         when: answers => {
@@ -114,7 +114,7 @@ module.exports = class extends Generator {
          if (answers.shouldContinue === 'no') {
            return false
          }
-         const atom = this.option.atom
+         const atom = this.options.atom
          if (atom && atom.treeView && atom.directory) {
            return false
          }
@@ -159,7 +159,7 @@ module.exports = class extends Generator {
   }
 
   writing() {
-    const {atom} = this.options
+    const atom = this.options.atom
 
     if (this.props.initProjectType && !this.config.get('initProjectType')) {
       this.config.set('initProjectType', this.props.initProjectType)
@@ -182,16 +182,17 @@ module.exports = class extends Generator {
     this.conflicter.force = true
     const componentName = _.upperFirst(_.camelCase(this.props.componentName))
 
-    let destFolder = this.destinationPath(`src/components/${_.lowerFirst(componentName)}`)
+    let destFolder = this.destinationPath(`src/components`)
     if (this.props.parentComponent !== '') {
       const parentComponentPath = finder.from(this.destinationPath('src/components')).findFirst().findFiles(`*/${this.props.parentComponent}.js`)
       if (parentComponentPath) {
-        destFolder = `${path.dirname(parentComponentPath)}/${_.lowerFirst(componentName)}`
+        destFolder = `${path.dirname(parentComponentPath)}`
       }
     }
     if (atom && atom.treeView && atom.directory) {
-      destFolder = `${atom.directory}/${_.lowerFirst(componentName)}`
+      destFolder = `${atom.directory}`
     }
+    destFolder = `${destFolder}/${projectType === 'reactNative' && this.props.createReduxConnect === 'no' ? '' : _.lowerFirst(componentName)}`
     destFolder = _.trimEnd(destFolder, '/') + '/'
 
     if (projectType === 'react') {
@@ -199,7 +200,7 @@ module.exports = class extends Generator {
     }
 
     this.fs.copyTpl(
-      this.templatePath('reactFuncFile.js'),
+      this.templatePath(projectType === 'reactNative' ? 'reactNativeFuncFile.js' : 'reactFuncFile.js'),
       `${destFolder}${componentName}.js`,
       {
         componentName,
