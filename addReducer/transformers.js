@@ -49,6 +49,7 @@ function getExportFromReducerNode(reducerName) {
   const fromReducer = j.identifier(`from${_.upperFirst(reducerName)}`)
   const reducer = j.identifier(reducerName)
   const key = j.identifier('key')
+  const args = j.identifier('args')
   const ifDefault = j.ifStatement(
     j.binaryExpression('===', key, j.literal('default')),
     j.returnStatement(null))
@@ -58,14 +59,14 @@ function getExportFromReducerNode(reducerName) {
       '=',
       j.memberExpression(
         j.memberExpression(j.identifier('module'), j.identifier('exports'), false),
-        j.identifier('key'),
+        key,
         true
       ),
       j.arrowFunctionExpression(
-        [j.identifier('state')],
+        [j.identifier('state'), j.restElement(args)],
         j.callExpression(
           j.memberExpression(fromReducer, key, true),
-          [j.memberExpression(j.identifier('state'), reducer, false)]
+          [j.memberExpression(j.identifier('state'), reducer, false), j.spreadElement(args)]
         ),
         true
       )
