@@ -6,8 +6,4 @@ const <%= componentName %> = (props) => (
   </div>
 )
 
-<%= componentName %>.propTypes = {
-
-}
-
 export default <%= componentName %>

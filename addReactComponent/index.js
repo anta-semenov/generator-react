@@ -164,7 +164,7 @@ module.exports = class extends Generator {
     if (this.props.initProjectType && !this.config.get('initProjectType')) {
       this.config.set('initProjectType', this.props.initProjectType)
     }
-    const projectType = !this.config.get('initProjectType') || this.props.initProjectType
+    const projectType = this.config.get('initProjectType') || this.props.initProjectType
 
     if (this.props.initResolvingPaths && !this.config.get('initResolvingPaths') && projectType !== 'reactNative') {
       this.config.set('initResolvingPaths', this.props.initResolvingPaths)
@@ -174,7 +174,7 @@ module.exports = class extends Generator {
     if (this.props.initStylePreprocessor && !this.config.get('initStylePreprocessor') && projectType !== 'reactNative') {
       this.config.set('initStylePreprocessor', this.props.initStylePreprocessor)
     }
-    const stylePreprocessor = !this.config.get('initStylePreprocessor') || this.props.initStylePreprocessor
+    const stylePreprocessor = this.config.get('initStylePreprocessor') || this.props.initStylePreprocessor
 
     if (this.props.shouldContinue === 'no') {
       return
@@ -204,7 +204,7 @@ module.exports = class extends Generator {
       `${destFolder}${componentName}.js`,
       {
         componentName,
-        styleImport: projectType === 'react' ? `import './${componentName}.${stylePreprocessor}'\n` : ''
+        styleImport: projectType === 'react' ? `import \'./${componentName}.${stylePreprocessor}\'\n` : ''
       }
     )
 
